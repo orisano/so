@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -12,6 +13,8 @@ import (
 
 func run() error {
 	addr := flag.String("addr", "", "(required)")
+	in := flag.Bool("i", true, "show stdin")
+	out := flag.Bool("o", true, "show stdout")
 	flag.Parse()
 	conn, err := net.Dial("tcp", *addr)
 	if err != nil {
@@ -21,14 +24,26 @@ func run() error {
 
 	args := flag.Args()
 	cmd := exec.Command(args[0], args[1:]...)
-	cmd.Stdin = io.TeeReader(conn, os.Stdout)
-	cmd.Stdout = io.MultiWriter(conn, os.Stdout)
+	var r io.Reader = conn
+	if *in {
+		r = io.TeeReader(r, os.Stdout)
+	}
+	var w io.Writer = conn
+	if *out {
+		w = io.MultiWriter(w, os.Stdout)
+	}
+	cmd.Stdin = r
+	cmd.Stdout = w
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("run program: %w", err)
 	}
-	_, err = io.Copy(os.Stdout, conn)
+	if *in {
+		_, err = io.Copy(os.Stdout, conn)
+	} else {
+		_, err = io.Copy(ioutil.Discard, conn)
+	}
 	return err
 }
 
@@ -38,5 +53,4 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-
 }
