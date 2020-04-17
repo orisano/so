@@ -13,8 +13,8 @@ import (
 
 func run() error {
 	addr := flag.String("addr", "", "(required)")
-	in := flag.Bool("i", true, "show stdin")
-	out := flag.Bool("o", true, "show stdout")
+	in := flag.Bool("i", false, "show stdin")
+	out := flag.Bool("o", false, "show stdout")
 	flag.Parse()
 	conn, err := net.Dial("tcp", *addr)
 	if err != nil {
